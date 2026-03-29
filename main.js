@@ -1,5 +1,7 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, shell, desktopCapturer, session } = require('electron');
 const path = require('path');
+const { uIOhook, UiohookKey } = require('uiohook-napi');
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow = null;
 let tray = null;
@@ -30,41 +32,61 @@ function createWindow() {
   // Load the web app
   mainWindow.loadURL(APP_URL);
 
-  // Show when ready and inject custom title bar
+  const INJECT_CSS = `
+    #echon-update-banner,[class*="UpdateBanner"]{display:none!important;}
+    div[style*="position: fixed"][style*="gradient"]{display:none!important;}
+    html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
+    #root { height: calc(100% - 32px) !important; overflow: hidden !important; }
+    #root > div { height: 100% !important; max-height: 100% !important; }
+    ::-webkit-scrollbar { width: 0px !important; height: 0px !important; display: none !important; }
+    * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+    body { overflow: hidden !important; }
+  `;
+
+  const INJECT_JS = `
+    (function() {
+      if (document.getElementById('echon-titlebar')) return;
+      const bar = document.createElement('div');
+      bar.id = 'echon-titlebar';
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;height:32px;background:#1e1f22;display:flex;align-items:center;justify-content:space-between;z-index:99999;-webkit-app-region:drag;padding-left:12px;border-bottom:1px solid #111214;';
+      bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 48 48" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="24" r="5" fill="#4f46e5" stroke="none"/><path d="M16 14a14 14 0 0 0 0 20" opacity="0.6"/><path d="M32 14a14 14 0 0 1 0 20" opacity="0.6"/></svg><span style="color:#b5bac1;font-size:12px;font-weight:600;font-family:Inter,sans-serif;">Echon</span></div>';
+      const controls = document.createElement('div');
+      controls.style.cssText = 'display:flex;-webkit-app-region:no-drag;height:32px;';
+      const btnStyle = 'width:46px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;color:#b5bac1;';
+      controls.innerHTML = '<button id="echon-min" style="' + btnStyle + '"><svg width="12" height="1" viewBox="0 0 12 1"><rect width="12" height="1" fill="currentColor"/></svg></button><button id="echon-max" style="' + btnStyle + '"><svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg></button><button id="echon-close" style="' + btnStyle + '" onmouseover="this.style.background=\\'#ed4245\\';this.style.color=\\'white\\'" onmouseout="this.style.background=\\'transparent\\';this.style.color=\\'#b5bac1\\'"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg></button>';
+      bar.appendChild(controls);
+      document.body.prepend(bar);
+      document.body.style.paddingTop = '0';
+      document.body.style.marginTop = '0';
+      const root = document.getElementById('root');
+      if (root) { root.style.marginTop = '32px'; root.style.height = 'calc(100vh - 32px)'; root.style.overflow = 'hidden'; }
+      document.getElementById('echon-min').onclick = () => window.echonDesktop?.minimize?.();
+      document.getElementById('echon-max').onclick = () => window.echonDesktop?.maximize?.();
+      document.getElementById('echon-close').onclick = () => window.echonDesktop?.close?.();
+    })();
+  `;
+
+  function injectCustomizations() {
+    mainWindow.webContents.insertCSS(INJECT_CSS);
+    mainWindow.webContents.executeJavaScript(INJECT_JS);
+    // Load saved PTT key from localStorage
+    mainWindow.webContents.executeJavaScript(`
+      try {
+        const s = JSON.parse(localStorage.getItem('echon_audio_settings'));
+        if (s?.pttKeyCode) window.echonDesktop?.setPttKey?.(s.pttKeyCode);
+      } catch {}
+    `).catch(() => {});
+  }
+
+  // Inject on first load
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    // Inject custom draggable title bar
-    mainWindow.webContents.executeJavaScript(`
-      (function() {
-        // Check if already injected
-        if (document.getElementById('echon-titlebar')) return;
-        const bar = document.createElement('div');
-        bar.id = 'echon-titlebar';
-        bar.style.cssText = 'position:fixed;top:0;left:0;right:0;height:32px;background:#1e1f22;display:flex;align-items:center;justify-content:space-between;z-index:99999;-webkit-app-region:drag;padding-left:12px;border-bottom:1px solid #111214;';
+    injectCustomizations();
+  });
 
-        // Left side — logo + name
-        bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 48 48" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="24" r="5" fill="#4f46e5" stroke="none"/><path d="M16 14a14 14 0 0 0 0 20" opacity="0.6"/><path d="M32 14a14 14 0 0 1 0 20" opacity="0.6"/></svg><span style="color:#b5bac1;font-size:12px;font-weight:600;font-family:Inter,sans-serif;">Echon</span></div>';
-
-        // Right side — window controls
-        const controls = document.createElement('div');
-        controls.style.cssText = 'display:flex;-webkit-app-region:no-drag;height:32px;';
-
-        const btnStyle = 'width:46px;height:32px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;color:#b5bac1;';
-
-        controls.innerHTML = '<button id="echon-min" style="' + btnStyle + '"><svg width="12" height="1" viewBox="0 0 12 1"><rect width="12" height="1" fill="currentColor"/></svg></button><button id="echon-max" style="' + btnStyle + '"><svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg></button><button id="echon-close" style="' + btnStyle + '" onmouseover="this.style.background=\\'#ed4245\\';this.style.color=\\'white\\'" onmouseout="this.style.background=\\'transparent\\';this.style.color=\\'#b5bac1\\'"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg></button>';
-
-        bar.appendChild(controls);
-        document.body.prepend(bar);
-
-        // Add padding to body
-        document.body.style.paddingTop = '32px';
-
-        // Wire up buttons
-        document.getElementById('echon-min').onclick = () => window.echonDesktop?.minimize?.();
-        document.getElementById('echon-max').onclick = () => window.echonDesktop?.maximize?.();
-        document.getElementById('echon-close').onclick = () => window.echonDesktop?.close?.();
-      })();
-    `);
+  // Re-inject on every page load (refresh, navigation)
+  mainWindow.webContents.on('did-finish-load', () => {
+    injectCustomizations();
   });
 
   // Open external links in browser
@@ -84,15 +106,97 @@ function createWindow() {
     }
   });
 
-  // Handle media permissions (mic, camera, screen share)
+  // Handle media permissions — allow ALL media access (mic, camera, screen)
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    const allowed = ['media', 'mediaKeySystem', 'notifications', 'display-capture'];
-    callback(allowed.includes(permission));
+    // Allow all permissions for our app
+    callback(true);
   });
 
   mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
-    const allowed = ['media', 'mediaKeySystem', 'notifications', 'display-capture'];
-    return allowed.includes(permission);
+    return true;
+  });
+
+  // Enable screen sharing in Electron — show source picker
+  mainWindow.webContents.session.setDisplayMediaRequestHandler(async (request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen', 'window'],
+        thumbnailSize: { width: 320, height: 180 },
+      });
+      if (sources.length === 0) { callback({ video: null }); return; }
+
+      // Build picker data
+      const sourceData = sources.map(s => ({
+        id: s.id,
+        name: s.name,
+        thumbnail: s.thumbnail.toDataURL(),
+      }));
+
+      // Create picker window
+      const picker = new BrowserWindow({
+        width: 680,
+        height: 500,
+        parent: mainWindow,
+        modal: true,
+        frame: false,
+        resizable: false,
+        webPreferences: { contextIsolation: false, nodeIntegration: true },
+        backgroundColor: '#1e1f22',
+      });
+
+      const pickerHTML = `<!DOCTYPE html>
+<html><head><style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1e1f22; color: #dbdee1; font-family: Inter, sans-serif; padding: 20px; overflow-y: auto; }
+  h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: white; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .source { cursor: pointer; border-radius: 8px; border: 2px solid transparent; overflow: hidden; transition: all 0.15s; background: #2b2d31; }
+  .source:hover { border-color: #4f46e5; transform: scale(1.02); }
+  .source img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .source .name { padding: 8px; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #b5bac1; }
+  .btns { display: flex; justify-content: flex-end; margin-top: 16px; gap: 8px; }
+  .btn { padding: 8px 20px; border-radius: 4px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-cancel { background: #4f545c; color: white; }
+  .btn-cancel:hover { background: #5d6269; }
+</style></head><body>
+  <h2>Choose what to share</h2>
+  <div class="grid" id="grid"></div>
+  <div class="btns"><button class="btn btn-cancel" onclick="cancel()">Cancel</button></div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    const sources = ${JSON.stringify(sourceData)};
+    const grid = document.getElementById('grid');
+    sources.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'source';
+      div.innerHTML = '<img src="' + s.thumbnail + '"><div class="name">' + s.name.replace(/</g,'&lt;') + '</div>';
+      div.onclick = () => ipcRenderer.send('screen-picker-select', s.id);
+      grid.appendChild(div);
+    });
+    function cancel() { ipcRenderer.send('screen-picker-select', null); }
+  </script>
+</body></html>`;
+
+      picker.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(pickerHTML));
+
+      ipcMain.once('screen-picker-select', (_, sourceId) => {
+        picker.close();
+        if (!sourceId) { callback({ video: null }); return; }
+        const selected = sources.find(s => s.id === sourceId);
+        if (selected) {
+          callback({ video: selected, audio: 'loopback' });
+        } else {
+          callback({ video: null });
+        }
+      });
+
+      picker.on('closed', () => {
+        ipcMain.removeAllListeners('screen-picker-select');
+      });
+    } catch (err) {
+      console.error('Screen picker failed:', err);
+      callback({ video: null });
+    }
   });
 }
 
@@ -155,21 +259,99 @@ function createTray() {
   });
 }
 
-// Push-to-talk global shortcut
-function registerPushToTalk() {
-  // Default: Tilde key (~) for push-to-talk
-  const PTT_KEY = '`';
+// Push-to-talk with global input detection (works even when app is not focused)
+// Uses uiohook-napi which supports BOTH keyboard keys and mouse buttons globally.
 
-  globalShortcut.register(PTT_KEY, () => {
-    mainWindow?.webContents.executeJavaScript(`
-      if (window.__echonPTT) window.__echonPTT(true);
-    `);
-  });
+// Map JS event.code → uiohook keycode
+const JS_CODE_TO_UIOHOOK = {
+  Backquote: UiohookKey.Backquote, Space: UiohookKey.Space,
+  Tab: UiohookKey.Tab, CapsLock: UiohookKey.CapsLock, Escape: UiohookKey.Escape,
+  KeyA: UiohookKey.A, KeyB: UiohookKey.B, KeyC: UiohookKey.C, KeyD: UiohookKey.D,
+  KeyE: UiohookKey.E, KeyF: UiohookKey.F, KeyG: UiohookKey.G, KeyH: UiohookKey.H,
+  KeyI: UiohookKey.I, KeyJ: UiohookKey.J, KeyK: UiohookKey.K, KeyL: UiohookKey.L,
+  KeyM: UiohookKey.M, KeyN: UiohookKey.N, KeyO: UiohookKey.O, KeyP: UiohookKey.P,
+  KeyQ: UiohookKey.Q, KeyR: UiohookKey.R, KeyS: UiohookKey.S, KeyT: UiohookKey.T,
+  KeyU: UiohookKey.U, KeyV: UiohookKey.V, KeyW: UiohookKey.W, KeyX: UiohookKey.X,
+  KeyY: UiohookKey.Y, KeyZ: UiohookKey.Z,
+  Digit0: UiohookKey[0], Digit1: UiohookKey[1], Digit2: UiohookKey[2],
+  Digit3: UiohookKey[3], Digit4: UiohookKey[4], Digit5: UiohookKey[5],
+  Digit6: UiohookKey[6], Digit7: UiohookKey[7], Digit8: UiohookKey[8], Digit9: UiohookKey[9],
+  F1: UiohookKey.F1, F2: UiohookKey.F2, F3: UiohookKey.F3, F4: UiohookKey.F4,
+  F5: UiohookKey.F5, F6: UiohookKey.F6, F7: UiohookKey.F7, F8: UiohookKey.F8,
+  F9: UiohookKey.F9, F10: UiohookKey.F10, F11: UiohookKey.F11, F12: UiohookKey.F12,
+  ShiftLeft: UiohookKey.Shift, ShiftRight: UiohookKey.ShiftRight,
+  ControlLeft: UiohookKey.Ctrl, ControlRight: UiohookKey.CtrlRight,
+  AltLeft: UiohookKey.Alt, AltRight: UiohookKey.AltRight,
+};
 
-  // Note: globalShortcut doesn't support key-up events
-  // For proper PTT, we'd need a native module like iohook
-  // For now, PTT acts as a toggle
+// Map "mouseN" (browser e.button) → uiohook mouse button number
+// Browser: 0=left, 1=middle, 2=right, 3=back(X1), 4=forward(X2)
+// uiohook: 1=left, 2=right, 3=middle, 4=back(X1), 5=forward(X2)
+const MOUSE_TO_UIOHOOK = {
+  mouse0: 1, mouse1: 3, mouse2: 2, mouse3: 4, mouse4: 5,
+};
+
+let pttKeycode = UiohookKey.Backquote; // default: backtick (keyboard)
+let pttMouseBtn = null;                 // null = keyboard mode; number = mouse mode
+let pttActive = false;
+
+function firePTT(pressed) {
+  mainWindow?.webContents.executeJavaScript(
+    `if (window.__echonPTT) window.__echonPTT(${pressed});`
+  ).catch(() => {});
 }
+
+function registerPushToTalk() {
+  try {
+    uIOhook.on('keydown', (e) => {
+      if (pttMouseBtn !== null) return;
+      if (e.keycode === pttKeycode && !pttActive) {
+        pttActive = true;
+        firePTT(true);
+      }
+    });
+
+    uIOhook.on('keyup', (e) => {
+      if (pttMouseBtn !== null) return;
+      if (e.keycode === pttKeycode && pttActive) {
+        pttActive = false;
+        firePTT(false);
+      }
+    });
+
+    uIOhook.on('mousedown', (e) => {
+      if (pttMouseBtn === null) return;
+      if (e.button === pttMouseBtn && !pttActive) {
+        pttActive = true;
+        firePTT(true);
+      }
+    });
+
+    uIOhook.on('mouseup', (e) => {
+      if (pttMouseBtn === null) return;
+      if (e.button === pttMouseBtn && pttActive) {
+        pttActive = false;
+        firePTT(false);
+      }
+    });
+
+    uIOhook.start();
+  } catch (err) {
+    console.error('Failed to register push-to-talk:', err);
+  }
+}
+
+// IPC to update PTT binding from settings UI (called on page load + when user changes setting)
+ipcMain.on('set-ptt-key', (_, jsKeyCode) => {
+  pttActive = false; // reset any stuck state when binding changes
+  if (jsKeyCode && jsKeyCode.startsWith('mouse')) {
+    pttMouseBtn = MOUSE_TO_UIOHOOK[jsKeyCode] ?? null;
+    pttKeycode = null;
+  } else {
+    pttKeycode = JS_CODE_TO_UIOHOOK[jsKeyCode] ?? UiohookKey.Backquote;
+    pttMouseBtn = null;
+  }
+});
 
 // Window control IPC
 ipcMain.on('window-minimize', () => mainWindow?.minimize());
@@ -178,10 +360,39 @@ ipcMain.on('window-maximize', () => {
   else mainWindow?.maximize();
 });
 ipcMain.on('window-close', () => mainWindow?.hide());
+ipcMain.on('restart-for-update', () => {
+  autoUpdater.quitAndInstall(false, true);
+});
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Clear all caches so desktop always loads the latest web version
+  await session.defaultSession.clearCache();
+  await session.defaultSession.clearStorageData({
+    storages: ['cachestorage', 'serviceworkers'],
+  });
+
   createWindow();
   createTray();
+  registerPushToTalk();
+
+  // Auto-update — check GitHub releases silently
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+
+  // When update is downloaded, notify user via the web app
+  autoUpdater.on('update-downloaded', () => {
+    mainWindow?.webContents.executeJavaScript(`
+      if (!document.getElementById('echon-desktop-update')) {
+        const banner = document.createElement('div');
+        banner.id = 'echon-desktop-update';
+        banner.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:99999;background:#4f46e5;color:white;padding:12px 20px;border-radius:8px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;';
+        banner.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>Update ready — click to restart';
+        banner.onclick = () => { window.echonDesktop?.restartForUpdate?.(); };
+        document.body.appendChild(banner);
+      }
+    `).catch(() => {});
+  });
 
   // Auto-launch on startup (optional)
   app.setLoginItemSettings({
@@ -201,6 +412,7 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   try { globalShortcut.unregisterAll(); } catch {}
+  try { uIOhook.stop(); } catch {}
 });
 
 // Single instance lock
