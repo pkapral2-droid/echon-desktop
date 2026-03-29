@@ -76,6 +76,10 @@ function createWindow() {
         if (s?.pttKeyCode) window.echonDesktop?.setPttKey?.(s.pttKeyCode);
       } catch {}
     `).catch(() => {});
+    // Log PTT status to renderer console (page is loaded at this point)
+    mainWindow.webContents.executeJavaScript(
+      `console.log('[PTT] status — pttKeycode: ${pttKeycode}, pttMouseBtn: ${pttMouseBtn}')`
+    ).catch(() => {});
   }
 
   // Inject on first load
