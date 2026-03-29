@@ -1,6 +1,6 @@
 {
   "name": "echon",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Echon - Your space to talk, share, and connect with communities that matter to you.",
   "main": "main.js",
   "scripts": {
@@ -45,6 +45,10 @@
       "repo": "echon-desktop"
     },
     "afterPack": "./afterPack.js",
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**",
+      "node_modules/node-gyp-build/**"
+    ],
     "directories": {
       "output": "dist"
     },
