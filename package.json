@@ -37,7 +37,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Echon"
+      "shortcutName": "Echon",
+      "artifactName": "Echon-Setup.exe"
     },
     "publish": {
       "provider": "github",
