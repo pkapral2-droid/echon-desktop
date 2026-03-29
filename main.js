@@ -320,6 +320,7 @@ function registerPushToTalk() {
     });
 
     uIOhook.on('mousedown', (e) => {
+      console.log('[PTT] mousedown button:', e.button, '| pttMouseBtn:', pttMouseBtn);
       if (pttMouseBtn === null) return;
       if (e.button === pttMouseBtn && !pttActive) {
         pttActive = true;
@@ -336,8 +337,9 @@ function registerPushToTalk() {
     });
 
     uIOhook.start();
+    console.log('[PTT] uiohook started successfully');
   } catch (err) {
-    console.error('Failed to register push-to-talk:', err);
+    console.error('[PTT] Failed to start uiohook:', err);
   }
 }
 
