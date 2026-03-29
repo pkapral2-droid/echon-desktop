@@ -295,6 +295,11 @@ let pttKeycode = UiohookKey.Backquote; // default: backtick (keyboard)
 let pttMouseBtn = null;                 // null = keyboard mode; number = mouse mode
 let pttActive = false;
 
+function rendererLog(...args) {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  mainWindow?.webContents.executeJavaScript(`console.log(${JSON.stringify(msg)})`).catch(() => {});
+}
+
 function firePTT(pressed) {
   mainWindow?.webContents.executeJavaScript(
     `if (window.__echonPTT) window.__echonPTT(${pressed});`
@@ -320,7 +325,7 @@ function registerPushToTalk() {
     });
 
     uIOhook.on('mousedown', (e) => {
-      console.log('[PTT] mousedown button:', e.button, '| pttMouseBtn:', pttMouseBtn);
+      rendererLog('[PTT] mousedown button:', e.button, '| pttMouseBtn:', pttMouseBtn);
       if (pttMouseBtn === null) return;
       if (e.button === pttMouseBtn && !pttActive) {
         pttActive = true;
@@ -337,9 +342,9 @@ function registerPushToTalk() {
     });
 
     uIOhook.start();
-    console.log('[PTT] uiohook started successfully');
+    rendererLog('[PTT] uiohook started successfully');
   } catch (err) {
-    console.error('[PTT] Failed to start uiohook:', err);
+    rendererLog('[PTT] Failed to start uiohook:', String(err));
   }
 }
 
