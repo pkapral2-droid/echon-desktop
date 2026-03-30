@@ -16,7 +16,7 @@ function createWindow() {
     minHeight: 600,
     title: 'Echon',
     icon: path.join(__dirname, 'icon.png'),
-    backgroundColor: '#1e1f22',
+    backgroundColor: '#0d0f1a',
     frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -48,7 +48,7 @@ function createWindow() {
       if (document.getElementById('echon-titlebar')) return;
       const bar = document.createElement('div');
       bar.id = 'echon-titlebar';
-      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;height:32px;background:#1e1f22;display:flex;align-items:center;justify-content:space-between;z-index:99999;-webkit-app-region:drag;padding-left:12px;border-bottom:1px solid #111214;';
+      bar.style.cssText = 'position:fixed;top:0;left:0;right:0;height:32px;background:var(--echon-bg-darker, #0d0f1a);display:flex;align-items:center;justify-content:space-between;z-index:99999;-webkit-app-region:drag;padding-left:12px;border-bottom:1px solid var(--echon-border, #0f1220);';
       bar.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 48 48" fill="none" stroke="#4f46e5" stroke-width="3" stroke-linecap="round"><circle cx="24" cy="24" r="5" fill="#4f46e5" stroke="none"/><path d="M16 14a14 14 0 0 0 0 20" opacity="0.6"/><path d="M32 14a14 14 0 0 1 0 20" opacity="0.6"/></svg><span style="color:#b5bac1;font-size:12px;font-weight:600;font-family:Inter,sans-serif;">Echon</span></div>';
       const controls = document.createElement('div');
       controls.style.cssText = 'display:flex;-webkit-app-region:no-drag;height:32px;';
@@ -380,6 +380,8 @@ ipcMain.on('window-maximize', () => {
   else mainWindow?.maximize();
 });
 ipcMain.on('window-close', () => mainWindow?.hide());
+ipcMain.on('window-fullscreen', (_, on) => mainWindow?.setFullScreen(!!on));
+ipcMain.handle('window-is-fullscreen', () => mainWindow?.isFullScreen() || false);
 ipcMain.on('restart-for-update', () => {
   autoUpdater.quitAndInstall(false, true);
 });

@@ -8,4 +8,6 @@ contextBridge.exposeInMainWorld('echonDesktop', {
   close: () => ipcRenderer.send('window-close'),
   setPttKey: (keyCode) => ipcRenderer.send('set-ptt-key', keyCode),
   restartForUpdate: () => ipcRenderer.send('restart-for-update'),
+  setFullscreen: (on) => ipcRenderer.send('window-fullscreen', on),
+  isFullscreen: () => ipcRenderer.sendSync('window-is-fullscreen'),
 });
