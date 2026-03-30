@@ -34,7 +34,6 @@ function createWindow() {
   mainWindow.loadURL(APP_URL);
 
   const INJECT_CSS = `
-    #echon-update-banner,[class*="UpdateBanner"]{display:none!important;}
     div[style*="position: fixed"][style*="gradient"]{display:none!important;}
     html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
     #root { height: calc(100% - 32px) !important; overflow: hidden !important; }
@@ -392,18 +391,9 @@ app.whenReady().then(async () => {
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.checkForUpdatesAndNotify().catch(() => {});
 
-  // When update is downloaded, notify user via the web app
+  // When update is downloaded, signal the web app's update button
   autoUpdater.on('update-downloaded', () => {
-    mainWindow?.webContents.executeJavaScript(`
-      if (!document.getElementById('echon-desktop-update')) {
-        const banner = document.createElement('div');
-        banner.id = 'echon-desktop-update';
-        banner.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:99999;background:#4f46e5;color:white;padding:12px 20px;border-radius:8px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;';
-        banner.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>Update ready — click to restart';
-        banner.onclick = () => { window.echonDesktop?.restartForUpdate?.(); };
-        document.body.appendChild(banner);
-      }
-    `).catch(() => {});
+    mainWindow?.webContents.executeJavaScript('window.__echonDesktopUpdateReady = true;').catch(() => {});
   });
 
   // Auto-launch on startup (optional)
