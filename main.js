@@ -277,8 +277,7 @@ function createTray() {
 
 // Map JS event.code → uiohook keycode
 const JS_CODE_TO_UIOHOOK = {
-  Backquote: UiohookKey.Backquote, Space: UiohookKey.Space,
-  Tab: UiohookKey.Tab, CapsLock: UiohookKey.CapsLock, Escape: UiohookKey.Escape,
+  // Letters
   KeyA: UiohookKey.A, KeyB: UiohookKey.B, KeyC: UiohookKey.C, KeyD: UiohookKey.D,
   KeyE: UiohookKey.E, KeyF: UiohookKey.F, KeyG: UiohookKey.G, KeyH: UiohookKey.H,
   KeyI: UiohookKey.I, KeyJ: UiohookKey.J, KeyK: UiohookKey.K, KeyL: UiohookKey.L,
@@ -286,15 +285,39 @@ const JS_CODE_TO_UIOHOOK = {
   KeyQ: UiohookKey.Q, KeyR: UiohookKey.R, KeyS: UiohookKey.S, KeyT: UiohookKey.T,
   KeyU: UiohookKey.U, KeyV: UiohookKey.V, KeyW: UiohookKey.W, KeyX: UiohookKey.X,
   KeyY: UiohookKey.Y, KeyZ: UiohookKey.Z,
+  // Numbers
   Digit0: UiohookKey[0], Digit1: UiohookKey[1], Digit2: UiohookKey[2],
   Digit3: UiohookKey[3], Digit4: UiohookKey[4], Digit5: UiohookKey[5],
   Digit6: UiohookKey[6], Digit7: UiohookKey[7], Digit8: UiohookKey[8], Digit9: UiohookKey[9],
+  // Function keys
   F1: UiohookKey.F1, F2: UiohookKey.F2, F3: UiohookKey.F3, F4: UiohookKey.F4,
   F5: UiohookKey.F5, F6: UiohookKey.F6, F7: UiohookKey.F7, F8: UiohookKey.F8,
   F9: UiohookKey.F9, F10: UiohookKey.F10, F11: UiohookKey.F11, F12: UiohookKey.F12,
+  // Modifiers
   ShiftLeft: UiohookKey.Shift, ShiftRight: UiohookKey.ShiftRight,
   ControlLeft: UiohookKey.Ctrl, ControlRight: UiohookKey.CtrlRight,
   AltLeft: UiohookKey.Alt, AltRight: UiohookKey.AltRight,
+  MetaLeft: UiohookKey.Meta, MetaRight: UiohookKey.MetaRight,
+  // Special keys
+  Backquote: UiohookKey.Backquote, Space: UiohookKey.Space,
+  Tab: UiohookKey.Tab, CapsLock: UiohookKey.CapsLock, Escape: UiohookKey.Escape,
+  Enter: UiohookKey.Enter, Backspace: UiohookKey.Backspace,
+  Delete: UiohookKey.Delete, Insert: UiohookKey.Insert,
+  Home: UiohookKey.Home, End: UiohookKey.End,
+  PageUp: UiohookKey.PageUp, PageDown: UiohookKey.PageDown,
+  // Arrow keys
+  ArrowUp: UiohookKey.ArrowUp, ArrowDown: UiohookKey.ArrowDown,
+  ArrowLeft: UiohookKey.ArrowLeft, ArrowRight: UiohookKey.ArrowRight,
+  // Numpad
+  Numpad0: UiohookKey.Numpad0, Numpad1: UiohookKey.Numpad1, Numpad2: UiohookKey.Numpad2,
+  Numpad3: UiohookKey.Numpad3, Numpad4: UiohookKey.Numpad4, Numpad5: UiohookKey.Numpad5,
+  Numpad6: UiohookKey.Numpad6, Numpad7: UiohookKey.Numpad7, Numpad8: UiohookKey.Numpad8,
+  Numpad9: UiohookKey.Numpad9,
+  NumpadMultiply: UiohookKey.NumpadMultiply, NumpadAdd: UiohookKey.NumpadAdd,
+  NumpadSubtract: UiohookKey.NumpadSubtract, NumpadDecimal: UiohookKey.NumpadDecimal,
+  NumpadDivide: UiohookKey.NumpadDivide, NumpadEnter: UiohookKey.NumpadEnter,
+  NumLock: UiohookKey.NumLock, ScrollLock: UiohookKey.ScrollLock,
+  PrintScreen: UiohookKey.PrintScreen,
 };
 
 // Map "mouseN" (browser e.button) → uiohook mouse button number
