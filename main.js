@@ -397,10 +397,13 @@ app.whenReady().then(async () => {
   createTray();
   registerPushToTalk();
 
-  // Auto-update — check GitHub releases silently
+  // Auto-update — check GitHub releases on launch + every 15 minutes
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+  setInterval(() => {
+    autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+  }, 15 * 60 * 1000); // Check every 15 minutes
 
   // When update is downloaded, signal the web app's update button
   autoUpdater.on('update-downloaded', () => {
