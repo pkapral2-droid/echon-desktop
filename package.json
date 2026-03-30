@@ -1,6 +1,6 @@
 {
   "name": "echon",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "Echon - Your space to talk, share, and connect with communities that matter to you.",
   "main": "main.js",
   "scripts": {

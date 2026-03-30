@@ -22,6 +22,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false, // Keep renderer active when unfocused (needed for PTT + voice)
       // Enable media features
       webSecurity: true,
       allowRunningInsecureContent: false,

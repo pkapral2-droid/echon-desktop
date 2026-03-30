@@ -6,4 +6,6 @@ contextBridge.exposeInMainWorld('echonDesktop', {
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
+  setPttKey: (keyCode) => ipcRenderer.send('set-ptt-key', keyCode),
+  restartForUpdate: () => ipcRenderer.send('restart-for-update'),
 });
