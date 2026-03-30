@@ -35,9 +35,10 @@ function createWindow() {
 
   const INJECT_CSS = `
     div[style*="position: fixed"][style*="gradient"]{display:none!important;}
-    html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; }
-    #root { height: calc(100% - 32px) !important; overflow: auto !important; }
-    #root > div { min-height: 100% !important; }
+    html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
+    #root { height: calc(100% - 32px) !important; overflow: hidden !important; }
+    #root > div { height: 100% !important; max-height: 100% !important; }
+    body { overflow: hidden !important; }
     ::-webkit-scrollbar { width: 0px !important; height: 0px !important; display: none !important; }
     * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
   `;
@@ -58,7 +59,16 @@ function createWindow() {
       document.body.style.paddingTop = '0';
       document.body.style.marginTop = '0';
       const root = document.getElementById('root');
-      if (root) { root.style.marginTop = '32px'; root.style.height = 'calc(100vh - 32px)'; }
+      if (root) { root.style.marginTop = '32px'; root.style.height = 'calc(100vh - 32px)'; root.style.overflow = 'hidden'; }
+      // Allow scrolling on standalone pages (privacy, terms, landing)
+      const enableScrollForStandalonePages = () => {
+        const path = window.location.pathname;
+        const standalone = ['\/privacy', '\/terms', '\/\$'].some(p => new RegExp(p).test(path));
+        if (root) root.style.overflow = standalone ? 'auto' : 'hidden';
+        document.body.style.overflow = standalone ? 'auto' : 'hidden';
+      };
+      enableScrollForStandalonePages();
+      window.addEventListener('popstate', enableScrollForStandalonePages);
       document.getElementById('echon-min').onclick = () => window.echonDesktop?.minimize?.();
       document.getElementById('echon-max').onclick = () => window.echonDesktop?.maximize?.();
       document.getElementById('echon-close').onclick = () => window.echonDesktop?.close?.();
