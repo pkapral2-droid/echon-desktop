@@ -7,6 +7,7 @@ let mainWindow = null;
 let tray = null;
 
 const APP_URL = 'https://echon-voice.com';
+const isMac = process.platform === 'darwin';
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -17,7 +18,10 @@ function createWindow() {
     title: 'Echon',
     icon: path.join(__dirname, 'icon.png'),
     backgroundColor: '#0d0f1a',
-    frame: false,
+    // macOS: native titlebar with hidden inset (traffic lights). Windows: frameless custom titlebar.
+    frame: isMac,
+    titleBarStyle: isMac ? 'hiddenInset' : undefined,
+    trafficLightPosition: isMac ? { x: 12, y: 12 } : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -33,7 +37,15 @@ function createWindow() {
   // Load the web app
   mainWindow.loadURL(APP_URL);
 
-  const INJECT_CSS = `
+  const INJECT_CSS = isMac ? `
+    div[style*="position: fixed"][style*="gradient"]{display:none!important;}
+    html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
+    #root { height: 100% !important; overflow: hidden !important; }
+    #root > div { height: 100% !important; max-height: 100% !important; }
+    body { overflow: hidden !important; }
+    ::-webkit-scrollbar { width: 0px !important; height: 0px !important; display: none !important; }
+    * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+  ` : `
     div[style*="position: fixed"][style*="gradient"]{display:none!important;}
     html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
     #root { height: calc(100% - 32px) !important; overflow: hidden !important; }
@@ -43,7 +55,8 @@ function createWindow() {
     * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
   `;
 
-  const INJECT_JS = `
+  // macOS uses native titlebar — no custom titlebar injection needed
+  const INJECT_JS = isMac ? `(function(){})();` : `
     (function() {
       if (document.getElementById('echon-titlebar')) return;
       const bar = document.createElement('div');
@@ -215,6 +228,7 @@ function createWindow() {
 
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'icon.png')).resize({ width: 16, height: 16 });
+  if (isMac) icon.setTemplateImage(true); // macOS: auto-adapts to light/dark menu bar
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([

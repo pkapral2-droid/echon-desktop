@@ -1,0 +1,82 @@
+name: Build macOS
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate macOS icon
+        run: node create-icns.js
+
+      - name: Build DMG (${{ matrix.arch }})
+        run: npx electron-builder --mac --${{ matrix.arch }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Echon-${{ matrix.arch }}-dmg
+          path: dist/Echon-${{ matrix.arch }}.dmg
+
+  release:
+    needs: build-mac
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download x64 DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: Echon-x64-dmg
+          path: artifacts/
+
+      - name: Download arm64 DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: Echon-arm64-dmg
+          path: artifacts/
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}-mac
+          name: Echon macOS Build ${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/Echon-x64.dmg
+            artifacts/Echon-arm64.dmg
+          body: |
+            ## Echon for macOS
+
+            **Intel Mac:** Download `Echon-x64.dmg`
+            **Apple Silicon (M1/M2/M3):** Download `Echon-arm64.dmg`
+
+            ### First Launch
+            Since the app is unsigned, right-click the app and select **Open** on first launch, then click **Open** in the dialog.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
