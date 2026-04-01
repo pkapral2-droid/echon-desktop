@@ -95,6 +95,8 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     injectCustomizations();
+    // Open DevTools for debugging (Ctrl+Shift+I also works)
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
   });
 
   // Re-inject on every page load (refresh, navigation)
