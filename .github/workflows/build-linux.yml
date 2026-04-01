@@ -32,13 +32,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Echon-linux-AppImage
-          path: dist/Echon-x64.AppImage
+          path: dist/Echon-x86_64.AppImage
 
       - name: Upload deb
         uses: actions/upload-artifact@v4
         with:
           name: Echon-linux-deb
-          path: dist/Echon-x64.deb
+          path: dist/Echon-amd64.deb
 
   release:
     needs: build-linux
@@ -67,12 +67,12 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            artifacts/Echon-x64.AppImage
-            artifacts/Echon-x64.deb
+            artifacts/Echon-x86_64.AppImage
+            artifacts/Echon-amd64.deb
           body: |
             ## Echon for Linux
 
-            **AppImage** (universal): Download `Echon-x64.AppImage`, make executable (`chmod +x`), and run.
-            **Debian/Ubuntu**: Download `Echon-x64.deb` and install with `sudo dpkg -i Echon-x64.deb`.
+            **AppImage** (universal): Download `Echon-x86_64.AppImage`, make executable (`chmod +x`), and run.
+            **Debian/Ubuntu**: Download `Echon-amd64.deb` and install with `sudo dpkg -i Echon-amd64.deb`.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

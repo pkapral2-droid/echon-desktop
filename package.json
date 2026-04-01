@@ -12,7 +12,10 @@
     "build:mac:arm64": "electron-builder --mac --arm64",
     "build:linux": "electron-builder --linux"
   },
-  "author": "Echon",
+  "author": {
+    "name": "Echon",
+    "email": "support@echon-voice.com"
+  },
   "license": "UNLICENSED",
   "devDependencies": {
     "electron": "^33.0.0",
