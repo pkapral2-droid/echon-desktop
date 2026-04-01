@@ -132,14 +132,35 @@ function createWindow() {
     }
   });
 
-  // Handle media permissions — allow ALL media access (mic, camera, screen)
+  // Handle media permissions — only grant to echon-voice.com
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    // Allow all permissions for our app
-    callback(true);
+    const url = webContents.getURL();
+    if (url.includes('echon-voice.com')) {
+      callback(true);
+    } else {
+      callback(false);
+    }
   });
 
   mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
-    return true;
+    const url = webContents.getURL();
+    return url.includes('echon-voice.com');
+  });
+
+  // Lock navigation to echon-voice.com only
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    if (!url.includes('echon-voice.com')) {
+      e.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  // Block creation of unexpected new windows/webContents
+  mainWindow.webContents.on('did-create-window', (childWindow) => {
+    // Only the screen picker should create child windows — it's always modal + parented
+    if (!childWindow.getParentWindow()) {
+      childWindow.close();
+    }
   });
 
   // Enable screen sharing in Electron — show source picker
@@ -158,7 +179,7 @@ function createWindow() {
         thumbnail: s.thumbnail.toDataURL(),
       }));
 
-      // Create picker window
+      // Create picker window (secure: uses preload instead of nodeIntegration)
       const picker = new BrowserWindow({
         width: 680,
         height: 500,
@@ -166,7 +187,11 @@ function createWindow() {
         modal: true,
         frame: false,
         resizable: false,
-        webPreferences: { contextIsolation: false, nodeIntegration: true },
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+          preload: path.join(__dirname, 'preload-picker.js'),
+        },
         backgroundColor: '#1e1f22',
       });
 
@@ -189,17 +214,16 @@ function createWindow() {
   <div class="grid" id="grid"></div>
   <div class="btns"><button class="btn btn-cancel" onclick="cancel()">Cancel</button></div>
   <script>
-    const { ipcRenderer } = require('electron');
     const sources = ${JSON.stringify(sourceData)};
     const grid = document.getElementById('grid');
     sources.forEach(s => {
       const div = document.createElement('div');
       div.className = 'source';
       div.innerHTML = '<img src="' + s.thumbnail + '"><div class="name">' + s.name.replace(/</g,'&lt;') + '</div>';
-      div.onclick = () => ipcRenderer.send('screen-picker-select', s.id);
+      div.onclick = () => window.picker.selectSource(s.id);
       grid.appendChild(div);
     });
-    function cancel() { ipcRenderer.send('screen-picker-select', null); }
+    function cancel() { window.picker.selectSource(null); }
   </script>
 </body></html>`;
 

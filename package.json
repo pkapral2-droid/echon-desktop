@@ -86,6 +86,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "preload-picker.js",
       "icon.png",
       "tray.png",
       "node_modules/node-global-key-listener/**/*",
