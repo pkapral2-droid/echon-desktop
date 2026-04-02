@@ -10,6 +10,8 @@ on:
 jobs:
   build-mac:
     runs-on: macos-latest
+    permissions:
+      contents: write
     strategy:
       matrix:
         arch: [x64, arm64]
