@@ -49,48 +49,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Echon-${{ matrix.arch }}-dmg
-          path: dist/Echon-${{ matrix.arch }}.dmg
-
-  release:
-    needs: build-mac
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download x64 DMG
-        uses: actions/download-artifact@v4
-        with:
-          name: Echon-x64-dmg
-          path: artifacts/
-
-      - name: Download arm64 DMG
-        uses: actions/download-artifact@v4
-        with:
-          name: Echon-arm64-dmg
-          path: artifacts/
-
-      - name: Create or update release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}-mac
-          name: Echon macOS Build ${{ github.run_number }}
-          draft: false
-          prerelease: false
-          files: |
-            artifacts/Echon-x64.dmg
-            artifacts/Echon-arm64.dmg
-          body: |
-            ## Echon for macOS
-
-            **Intel Mac:** Download `Echon-x64.dmg`
-            **Apple Silicon (M1/M2/M3):** Download `Echon-arm64.dmg`
-
-            ### First Launch
-            Since the app is unsigned, right-click the app and select **Open** on first launch, then click **Open** in the dialog.
+      - name: Upload to latest release
+        run: |
+          LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          gh release upload "$LATEST_TAG" dist/Echon-${{ matrix.arch }}.dmg --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

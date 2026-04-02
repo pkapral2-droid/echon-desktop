@@ -10,6 +10,8 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -28,51 +30,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload AppImage
-        uses: actions/upload-artifact@v4
-        with:
-          name: Echon-linux-AppImage
-          path: dist/Echon-x86_64.AppImage
-
-      - name: Upload deb
-        uses: actions/upload-artifact@v4
-        with:
-          name: Echon-linux-deb
-          path: dist/Echon-amd64.deb
-
-  release:
-    needs: build-linux
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download AppImage
-        uses: actions/download-artifact@v4
-        with:
-          name: Echon-linux-AppImage
-          path: artifacts/
-
-      - name: Download deb
-        uses: actions/download-artifact@v4
-        with:
-          name: Echon-linux-deb
-          path: artifacts/
-
-      - name: Create or update release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}-linux
-          name: Echon Linux Build ${{ github.run_number }}
-          draft: false
-          prerelease: false
-          files: |
-            artifacts/Echon-x86_64.AppImage
-            artifacts/Echon-amd64.deb
-          body: |
-            ## Echon for Linux
-
-            **AppImage** (universal): Download `Echon-x86_64.AppImage`, make executable (`chmod +x`), and run.
-            **Debian/Ubuntu**: Download `Echon-amd64.deb` and install with `sudo dpkg -i Echon-amd64.deb`.
+      - name: Upload to latest release
+        run: |
+          LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          gh release upload "$LATEST_TAG" dist/Echon-x86_64.AppImage dist/Echon-amd64.deb --clobber
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
