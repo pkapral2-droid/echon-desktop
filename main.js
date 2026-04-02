@@ -124,9 +124,15 @@ function createWindow() {
     return { action: 'allow' };
   });
 
-  // Minimize to tray instead of closing
+  // Close behavior: macOS = quit on Cmd+Q, hide on red button. Windows = minimize to tray.
   mainWindow.on('close', (e) => {
-    if (!app.isQuitting) {
+    if (app.isQuitting) return; // Let it close
+    if (isMac) {
+      // On macOS, Cmd+Q sets app.isQuitting via before-quit. Red button just hides.
+      e.preventDefault();
+      mainWindow.hide();
+    } else {
+      // On Windows/Linux, minimize to tray
       e.preventDefault();
       mainWindow.hide();
     }
@@ -488,6 +494,7 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
+  app.isQuitting = true;
   try { globalShortcut.unregisterAll(); } catch {}
   try { uIOhook.stop(); } catch {}
 });
