@@ -50,7 +50,7 @@
     "mac": {
       "target": [
         {
-          "target": "dmg",
+          "target": "zip",
           "arch": [
             "x64",
             "arm64"
@@ -59,7 +59,7 @@
       ],
       "icon": "icon.icns",
       "category": "public.app-category.social-networking",
-      "artifactName": "Echon-${arch}.dmg",
+      "artifactName": "Echon-${arch}-mac.zip",
       "entitlements": "entitlements.mac.plist",
       "entitlementsInherit": "entitlements.mac.plist",
       "identity": null,

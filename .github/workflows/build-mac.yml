@@ -31,7 +31,7 @@ jobs:
       - name: Generate macOS icon
         run: node create-icns.js
 
-      - name: Build DMG (${{ matrix.arch }})
+      - name: Build (${{ matrix.arch }})
         run: npx electron-builder --mac --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -40,6 +40,6 @@ jobs:
       - name: Upload to latest release
         run: |
           LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
-          gh release upload "$LATEST_TAG" dist/Echon-${{ matrix.arch }}.dmg --clobber
+          gh release upload "$LATEST_TAG" dist/Echon-${{ matrix.arch }}-mac.zip --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
