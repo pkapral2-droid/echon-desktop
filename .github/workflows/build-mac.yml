@@ -31,22 +31,8 @@ jobs:
       - name: Generate macOS icon
         run: node create-icns.js
 
-      - name: Build app bundle (${{ matrix.arch }})
-        run: npx electron-builder --mac --${{ matrix.arch }} --dir
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Ad-hoc sign app (enables right-click Open without xattr)
-        run: |
-          APP_PATH=$(find dist/mac* -name "Echon.app" -maxdepth 1 2>/dev/null | head -1)
-          if [ -n "$APP_PATH" ]; then
-            codesign --force --deep --sign - "$APP_PATH"
-            echo "Ad-hoc signed: $APP_PATH"
-          fi
-
-      - name: Package DMG (${{ matrix.arch }})
-        run: npx electron-builder --mac --${{ matrix.arch }} --prepackaged "$(find dist/mac* -maxdepth 0 2>/dev/null | head -1)"
+      - name: Build DMG (${{ matrix.arch }})
+        run: npx electron-builder --mac --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
