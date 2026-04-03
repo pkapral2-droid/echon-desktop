@@ -10,4 +10,6 @@ contextBridge.exposeInMainWorld('echonDesktop', {
   restartForUpdate: () => ipcRenderer.send('restart-for-update'),
   setFullscreen: (on) => ipcRenderer.send('window-fullscreen', on),
   isFullscreen: () => ipcRenderer.sendSync('window-is-fullscreen'),
+  // High-fps screen capture
+  showScreenPicker: () => ipcRenderer.invoke('show-screen-picker'),
 });

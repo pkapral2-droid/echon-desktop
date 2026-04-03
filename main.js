@@ -453,6 +453,87 @@ ipcMain.on('restart-for-update', () => {
   autoUpdater.quitAndInstall(false, true);
 });
 
+// High-fps screen capture picker — returns sourceId for getUserMedia path
+ipcMain.handle('show-screen-picker', async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+    });
+    if (sources.length === 0) return null;
+
+    const sourceData = sources.map(s => ({
+      id: s.id,
+      name: s.name,
+      thumbnail: s.thumbnail.toDataURL(),
+    }));
+
+    const picker = new BrowserWindow({
+      width: 680,
+      height: 500,
+      parent: mainWindow,
+      modal: true,
+      frame: false,
+      resizable: false,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+        preload: path.join(__dirname, 'preload-picker.js'),
+      },
+      backgroundColor: '#1e1f22',
+    });
+
+    const pickerHTML = `<!DOCTYPE html>
+<html><head><style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1e1f22; color: #dbdee1; font-family: Inter, sans-serif; padding: 20px; overflow-y: auto; }
+  h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: white; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .source { cursor: pointer; border-radius: 8px; border: 2px solid transparent; overflow: hidden; transition: all 0.15s; background: #2b2d31; }
+  .source:hover { border-color: #4f46e5; transform: scale(1.02); }
+  .source img { width: 100%; height: 120px; object-fit: cover; display: block; }
+  .source .name { padding: 8px; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #b5bac1; }
+  .btns { display: flex; justify-content: flex-end; margin-top: 16px; gap: 8px; }
+  .btn { padding: 8px 20px; border-radius: 4px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-cancel { background: #4f545c; color: white; }
+  .btn-cancel:hover { background: #5d6269; }
+</style></head><body>
+  <h2>Choose what to share</h2>
+  <div class="grid" id="grid"></div>
+  <div class="btns"><button class="btn btn-cancel" onclick="cancel()">Cancel</button></div>
+  <script>
+    const sources = ${JSON.stringify(sourceData)};
+    const grid = document.getElementById('grid');
+    sources.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'source';
+      div.innerHTML = '<img src="' + s.thumbnail + '"><div class="name">' + s.name.replace(/</g,'&lt;') + '</div>';
+      div.onclick = () => window.picker.selectSource(s.id);
+      grid.appendChild(div);
+    });
+    function cancel() { window.picker.selectSource(null); }
+  </script>
+</body></html>`;
+
+    picker.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(pickerHTML));
+
+    return new Promise((resolve) => {
+      const onSelect = (_, sourceId) => {
+        picker.close();
+        resolve(sourceId || null);
+      };
+      ipcMain.once('screen-picker-select', onSelect);
+      picker.on('closed', () => {
+        ipcMain.removeListener('screen-picker-select', onSelect);
+        resolve(null);
+      });
+    });
+  } catch (err) {
+    console.error('Screen picker failed:', err);
+    return null;
+  }
+});
+
 app.whenReady().then(async () => {
   // Clear all caches so desktop always loads the latest web version
   await session.defaultSession.clearCache();
