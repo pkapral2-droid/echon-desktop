@@ -240,12 +240,7 @@ function createWindow() {
         if (!sourceId) { callback({ video: null }); return; }
         const selected = sources.find(s => s.id === sourceId);
         if (selected) {
-          callback({
-            video: Object.assign(selected, {
-              mandatory: { minFrameRate: 30, maxFrameRate: 60 },
-            }),
-            audio: 'loopback',
-          });
+          callback({ video: selected, audio: 'loopback' });
         } else {
           callback({ video: null });
         }
